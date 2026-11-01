@@ -236,12 +236,12 @@
       const value = typeof item === "string" || typeof item === "number"
         ? String(item)
         : String((item && (item.value || item.text)) || "");
-      const sourceUrl = safeUrl(item && (item.sourceUrl || item.url || (item.source && item.source.url))) || safeUrl(sourceFallback.url);
+      const sourceUrl = safeUrl(item && (item.sourceUrl || item.url || (item.source && item.source.url)));
       if (!value.trim()) return;
       normalized[id] = {
         value: value.trim(),
         sourceUrl: sourceUrl,
-        sourceName: String((item && (item.sourceName || item.sourceTitle || (item.source && item.source.title))) || sourceFallback.title || ""),
+        sourceName: String((item && (item.sourceName || item.sourceTitle || (item.source && item.source.title))) || ""),
         evidence: String((item && (item.evidence || item.quote || item.excerpt)) || ""),
         confidence: String((item && item.confidence) || "待核对")
       };
@@ -488,6 +488,30 @@
     setStatus("已填入 " + applied.length + " 项候选资料并保存到本浏览器。请继续核对来源和企业原始材料。", "success");
   }
 
+  function renderSavedSources() {
+    let saved = null;
+    try {
+      saved = JSON.parse(localStorage.getItem("regionalCompanyResearch") || "null");
+    } catch (_) {}
+    if (!saved || !Array.isArray(saved.fields) || !saved.fields.length) return;
+    const preview = document.getElementById("companySearchPreview");
+    if (!preview) return;
+    const rows = saved.fields.map(function (item) {
+      const link = safeUrl(item.sourceUrl);
+      const source = link
+        ? '<a href="' + escapeHtml(link) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(item.sourceName || link) + ' ↗</a>'
+        : '<em>来源链接不可用</em>';
+      return '<li><strong>' + escapeHtml(item.label || FIELD_LABELS[item.id] || item.id) + '</strong>：' +
+        escapeHtml(item.value) + '<br><span class="company-suggestion-source">来源：' + source +
+        (item.evidence ? '<br>依据：' + escapeHtml(item.evidence) : "") + '</span></li>';
+    }).join("");
+    const when = saved.researchedAt ? new Date(saved.researchedAt).toLocaleString("zh-CN") : "时间待确认";
+    preview.innerHTML = '<h4>最近一次资料检索 · ' + escapeHtml(saved.query || "") + '</h4>' +
+      '<p>检索时间：' + escapeHtml(when) + '。以下为已填入字段的来源记录，可打开核对。</p>' +
+      '<div class="company-search-sources"><ul>' + rows + '</ul></div>';
+    preview.hidden = false;
+  }
+
   function init() {
     if (!document.getElementById("cpName")) return;
     addStyles();
@@ -505,6 +529,7 @@
       };
     }
     if (typeof window.loadCompanyProfile === "function") window.loadCompanyProfile();
+    renderSavedSources();
     const saveButton = document.getElementById("saveCompany");
     if (saveButton && typeof window.saveCompanyProfile === "function") {
       saveButton.onclick = window.saveCompanyProfile;
