@@ -1,0 +1,3 @@
+deepseek-harness-sdk
+fastapi
+uvicorn[standard]
